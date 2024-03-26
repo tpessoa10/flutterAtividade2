@@ -1,6 +1,7 @@
 class Usuario{
+  int id;
   String nome;
   String email;
 
-  Usuario(this.nome, this.email);
+  Usuario(this.id, this.nome, this.email);
 }

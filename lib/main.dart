@@ -1,7 +1,7 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_application_3/model/Usuario.dart';
+import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
 
 void main() {
   runApp(const MyApp());
@@ -37,16 +37,48 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
 
+  int? idUsuario;
+  _openBanco() async {
+    var dataBasePath = await getDatabasesPath();
+    String path = join(dataBasePath, 'banco.db');
+    var bd = await openDatabase(path, version: 1,
+    onCreate: (db, versaoRecente) async{
+      String sql = "CREATE TABLE usuarios (id INTEGER PRIMARY KEY AUTOINCREMENT, nome VARCHAR, email VARCHAR)";
+      await db.execute(sql);
+    });
+    print("Banco" + bd.isOpen.toString());
+    return bd;
+  }
+
+
+  _salvar() async{
+    Database db = await _openBanco();
+    Map<String, dynamic> dadosUsuario = Map();
+    dadosUsuario['id'] = usuario.id;
+    dadosUsuario['nome'] = usuario.nome;
+    dadosUsuario['email'] = usuario.email;
+    setState(() async {
+      idUsuario = await db.insert('usuarios', dadosUsuario);
+    });
+    print(idUsuario);
+  }
+
+  _retornarTodos() async{
+    final databasePath = await getDatabasesPath();
+    final database = await openDatabase(
+      join(databasePath, 'banco.db')
+    );
+    final List<Map<String, dynamic>> usuarios = await database.query('usuarios');
+  }
+
   List <Usuario> usuarios = [
-    Usuario('Usuario 1', 'user1@email.com'),
-    Usuario('Usuario 2', 'user2@email.com'),
-    Usuario('Usuario 3', 'user3@email.com')
+    Usuario( 0,'Usuario 1', 'user1@email.com'),
+    Usuario(0,'Usuario 2', 'user2@email.com'),
+    Usuario(0,'Usuario 3', 'user3@email.com')
   ];
 
-  Usuario usuario = Usuario('Usuario Principal', 'user@email.com');
-
- 
-
+  Usuario usuario = Usuario(0,'Usuario Principal', 'user@email.com');
+  
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
