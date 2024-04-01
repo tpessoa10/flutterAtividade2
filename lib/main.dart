@@ -1,4 +1,6 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_application_3/model/Usuario.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
@@ -36,6 +38,12 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  late Future<List<Map<String, dynamic>>> _futureUsuarios;
+    List<Map<String, dynamic>> _listaUsuarios = [];
+
+
+  TextEditingController usuarioController = TextEditingController();
+  TextEditingController emailController = TextEditingController();
 
   int? idUsuario;
   _openBanco() async {
@@ -51,7 +59,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
 
-  _salvar() async{
+  _salvar(Usuario usuario) async{
     Database db = await _openBanco();
     Map<String, dynamic> dadosUsuario = Map();
     dadosUsuario['id'] = usuario.id;
@@ -61,24 +69,37 @@ class _MyHomePageState extends State<MyHomePage> {
       idUsuario = await db.insert('usuarios', dadosUsuario);
     });
     print(idUsuario);
+    setState(() {
+      _futureUsuarios = _retornarTodos();
+    });
   }
 
-  _retornarTodos() async{
+  Future<List<Map<String, dynamic>>> _retornarTodos() async{
     final databasePath = await getDatabasesPath();
     final database = await openDatabase(
-      join(databasePath, 'banco.db')
+      join(databasePath, 'banco.db') 
     );
-    final List<Map<String, dynamic>> usuarios = await database.query('usuarios');
+    var usuarios = await database.query('usuarios');
+    return usuarios;
   }
 
-  List <Usuario> usuarios = [
+ /* List <Usuario> usuarios = [
     Usuario( 0,'Usuario 1', 'user1@email.com'),
     Usuario(0,'Usuario 2', 'user2@email.com'),
     Usuario(0,'Usuario 3', 'user3@email.com')
   ];
 
   Usuario usuario = Usuario(0,'Usuario Principal', 'user@email.com');
-  
+  */
+
+  @override
+  void initState(){
+    super.initState();
+    _openBanco();
+    _futureUsuarios = _retornarTodos();
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -101,7 +122,8 @@ class _MyHomePageState extends State<MyHomePage> {
           ],
         ),
       ),
-      body:  TabBarView(
+      body:  
+      TabBarView(
         children: [
           Center(
            child: Column(
@@ -109,7 +131,8 @@ class _MyHomePageState extends State<MyHomePage> {
             children: [
               Container(
                 width: 400,
-                child: const TextField(
+                child: TextField(
+                    controller: usuarioController,
                     decoration: InputDecoration(
                     border: OutlineInputBorder(),
                     hintText: 'Usuário: ',
@@ -121,10 +144,11 @@ class _MyHomePageState extends State<MyHomePage> {
               Container(
                 width: 400,
                 padding: const EdgeInsets.symmetric(vertical: 10),
-                child: const TextField(
+                child: TextField(
+                  controller: emailController,
                    decoration: InputDecoration(
                     border: OutlineInputBorder(),
-                    hintText: 'Senha: ',
+                    hintText: 'Email: ',
                     fillColor: Colors.white70,
                     filled: true
               ),
@@ -133,7 +157,17 @@ class _MyHomePageState extends State<MyHomePage> {
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 child: ElevatedButton(
-                  onPressed: () => {}, 
+                  onPressed: () async {
+                    String usuario = usuarioController.text;
+                    String email = emailController.text;
+
+                    Usuario user = Usuario(nome:usuario, email:email);
+                    await _salvar(user);
+                    setState(() {
+                      _futureUsuarios;
+                      _listaUsuarios;
+                    });
+                  }, 
                   child: const Text('Login')),
               )
             ],
@@ -141,39 +175,45 @@ class _MyHomePageState extends State<MyHomePage> {
            
           ),
           Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: usuarios.length,
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _futureUsuarios,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return CircularProgressIndicator();
+                } else if (snapshot.hasError) {
+                  return Text('Erro ao carregar os dados');
+                } else {
+                  final usuarios = snapshot.data ??[];
+                  _listaUsuarios = usuarios;
+                  return ListView.builder(
+                    itemCount: usuarios?.length,
                     itemBuilder: (context, index) {
-                    return Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const SizedBox(height: 5),
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: Colors.black,
-                              width: 0.1
+                      return Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(height: 5),
+                          Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: Colors.black,
+                                width: 0.1,
+                              ),
+                              color: Colors.white70,
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                            color: Colors.white70,
-                            borderRadius: BorderRadius.circular(16)
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+                            child: Text(usuarios?[index]['nome']),
                           ),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                          child: Text(usuarios[index].nome),
-                        ),
-                        const SizedBox(height: 5)
-                      ],
-                    );
+                          const SizedBox(height: 5),
+                        ],
+                      );
                     },
-                  ),
-                )
-              ],
+                  );
+                }
+              },
             ),
           ),
-           Center(
+           /*Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -196,7 +236,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 )
               ],
             ),
-          )
+          )*/
         ],
         
       ),
